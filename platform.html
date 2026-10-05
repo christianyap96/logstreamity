@@ -7,6 +7,9 @@
 <link href="live.png" rel="icon" type="image/png"/>
 <link href="style.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { theme: { extend: { colors: { 'dynatrace-primary': '#1496FF', 'dynatrace-secondary': '#454D57' } } } };
+</script>
 </head>
 <body class="bg-gray-100 text-gray-800">
 <main class="max-w-5xl mx-auto p-6 space-y-6">
@@ -47,8 +50,8 @@
       <label class="text-sm col-span-2"><input id="lk-overwrite" type="checkbox"/> Overwrite if the path already exists</label>
     </div>
     <div class="flex flex-wrap gap-2">
-      <button id="lk-preset-jsonl" class="px-3 py-2 rounded border">Preset: JSONL</button>
-      <button id="lk-preset-csv" class="px-3 py-2 rounded border">Preset: CSV from header</button>
+      <button id="lk-preset-jsonl" class="px-3 py-2 rounded border border-gray-400 bg-white hover:bg-gray-50">Preset: JSONL</button>
+      <button id="lk-preset-csv" class="px-3 py-2 rounded border border-gray-400 bg-white hover:bg-gray-50">Preset: CSV from header</button>
       <button id="lk-test" class="px-3 py-2 rounded bg-dynatrace-secondary text-white">Test pattern</button>
       <button id="lk-upload" class="px-3 py-2 rounded bg-dynatrace-primary text-white">Upload</button>
       <button id="lk-delete" class="px-3 py-2 rounded bg-red-600 text-white">Delete path…</button>
@@ -59,7 +62,7 @@
     <h2 class="text-xl font-semibold">Anomaly detectors (<code>builtin:davis.anomaly-detectors</code>)</h2>
     <div class="flex flex-wrap gap-2">
       <button id="ad-pull" class="px-3 py-2 rounded bg-dynatrace-primary text-white">Pull detectors</button>
-      <button id="ad-export" class="px-3 py-2 rounded border">Export pulled JSON</button>
+      <button id="ad-export" class="px-3 py-2 rounded border border-gray-400 bg-white hover:bg-gray-50">Export pulled JSON</button>
     </div>
     <div class="overflow-x-auto"><table class="min-w-full text-sm" id="ad-table"><thead></thead><tbody></tbody></table></div>
 
@@ -82,7 +85,7 @@
       <label>externalId (optional) <input id="f-ext" class="block w-full border rounded p-2" placeholder="splunk:alert-name"/></label>
     </div>
     <div class="flex flex-wrap gap-2">
-      <button id="ad-fill" class="px-3 py-2 rounded border">Form → JSON</button>
+      <button id="ad-fill" class="px-3 py-2 rounded border border-gray-400 bg-white hover:bg-gray-50">Form → JSON</button>
       <button id="ad-validate" class="px-3 py-2 rounded bg-dynatrace-secondary text-white">Validate (server, no save)</button>
       <button id="ad-push" class="px-3 py-2 rounded bg-dynatrace-primary text-white">Push (create)</button>
     </div>

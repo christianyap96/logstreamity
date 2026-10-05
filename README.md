@@ -4,8 +4,8 @@
 
 Logstreamity is a **purely client-side** web app for testing and demonstrating log ingestion into **Dynatrace Logs API v2**—directly from your browser. Load any line-based log file (TXT/LOG/JSON/XML lines), optionally inject attributes, choose a timestamp strategy, and stream logs in real time or at high speed. No servers. No storage. Just the browser doing the work.
 
-- **Live Hosted on GitHub Pages:** https://justschwendi.github.io/logstreamity/
-- **Host Offline by Git-Cloning:** https://github.com/JustSchwendi/logstreamity
+- **Live Hosted on GitHub Pages:** https://christianyap96.github.io/logstreamity/
+- **Host Offline by Git-Cloning:** https://github.com/christianyap96/logstreamity
 
 ---
 
@@ -47,7 +47,7 @@ Logstreamity is a **purely client-side** web app for testing and demonstrating l
 
 ### Option A — Use the hosted page (easiest)
 
-Open: **https://justschwendi.github.io/logstreamity/**
+Open: **https://christianyap96.github.io/logstreamity/**
 
 1. Enter your **Dynatrace endpoint** (Logs API v2). Logstreamity will normalize it to `https://<host>/api/v2/logs/ingest` for ingestion!
 2. Paste a Dynatrace **Access Token** with permission  "log ingest".
@@ -122,6 +122,8 @@ Then open: `http://localhost:3000` (or `:8080`, depending on your command).
 
 ## Platform tools (`platform.html`)
 
+Live: **https://christianyap96.github.io/logstreamity/platform.html**
+
 A second client-side page for two platform APIs. It uses a **platform token** (Bearer) against `https://<env>.apps.dynatrace.com`, not the Api-Token used for log ingest.
 
 - **Lookup files:** test a DPL parse pattern, upload or overwrite `/lookups/...` files, delete (with typed confirmation). Verify afterwards in a Notebook with `fetch dt.system.files` and `load "/lookups/..."`.
@@ -183,3 +185,7 @@ Built by **Christian Schwendemann**.
 Made with ❤️ for SREs, DevOps, and anyone who needs a fast, safe way to demo or test Dynatrace log ingestion.
 
 **Additional contributors:** Amrith Raj
+
+---
+
+Forked from [JustSchwendi/logstreamity](https://github.com/JustSchwendi/logstreamity) (Unlicense). Original author credited; the platform tools are additions in this fork.
