@@ -10,11 +10,18 @@
 <script>
 tailwind.config = { theme: { extend: { colors: { 'dynatrace-primary': '#1496FF', 'dynatrace-secondary': '#454D57' } } } };
 </script>
+<style>
+  .pt-btn{display:inline-block;padding:.5rem .9rem;border-radius:.375rem;font-size:.875rem;font-weight:500;cursor:pointer;border:1px solid transparent;line-height:1.25rem}
+  .pt-btn-primary{background:#1496FF;color:#fff}.pt-btn-primary:hover{background:#0073E6}
+  .pt-btn-secondary{background:#454D57;color:#fff}.pt-btn-secondary:hover{background:#343a42}
+  .pt-btn-outline{background:#fff;color:#1f2937;border-color:#9ca3af}.pt-btn-outline:hover{background:#f3f4f6}
+  .pt-btn-danger{background:#dc2626;color:#fff}.pt-btn-danger:hover{background:#b91c1c}
+</style>
 </head>
 <body class="bg-gray-100 text-gray-800">
 <main class="max-w-5xl mx-auto p-6 space-y-6">
   <header class="flex items-center justify-between">
-    <h1 class="text-2xl font-semibold">Platform tools: Lookups &amp; Anomaly Detectors</h1>
+    <h1 class="text-2xl font-semibold">Platform tools: Lookups &amp; Anomaly Detectors <span class="text-xs font-normal text-gray-500">build 3</span></h1>
     <a class="text-blue-600 underline" href="index.html">← Log ingest</a>
   </header>
 
@@ -50,19 +57,19 @@ tailwind.config = { theme: { extend: { colors: { 'dynatrace-primary': '#1496FF',
       <label class="text-sm col-span-2"><input id="lk-overwrite" type="checkbox"/> Overwrite if the path already exists</label>
     </div>
     <div class="flex flex-wrap gap-2">
-      <button id="lk-preset-jsonl" class="px-3 py-2 rounded border border-gray-400 bg-white hover:bg-gray-50">Preset: JSONL</button>
-      <button id="lk-preset-csv" class="px-3 py-2 rounded border border-gray-400 bg-white hover:bg-gray-50">Preset: CSV from header</button>
-      <button id="lk-test" class="px-3 py-2 rounded bg-dynatrace-secondary text-white">Test pattern</button>
-      <button id="lk-upload" class="px-3 py-2 rounded bg-dynatrace-primary text-white">Upload</button>
-      <button id="lk-delete" class="px-3 py-2 rounded bg-red-600 text-white">Delete path…</button>
+      <button id="lk-preset-jsonl" class="pt-btn pt-btn-outline">Preset: JSONL</button>
+      <button id="lk-preset-csv" class="pt-btn pt-btn-outline">Preset: CSV from header</button>
+      <button id="lk-test" class="pt-btn pt-btn-secondary">Test pattern</button>
+      <button id="lk-upload" class="pt-btn pt-btn-primary">Upload</button>
+      <button id="lk-delete" class="pt-btn pt-btn-danger">Delete path…</button>
     </div>
   </section>
 
   <section class="bg-white rounded-lg shadow p-6 space-y-3" id="detectors">
     <h2 class="text-xl font-semibold">Anomaly detectors (<code>builtin:davis.anomaly-detectors</code>)</h2>
     <div class="flex flex-wrap gap-2">
-      <button id="ad-pull" class="px-3 py-2 rounded bg-dynatrace-primary text-white">Pull detectors</button>
-      <button id="ad-export" class="px-3 py-2 rounded border border-gray-400 bg-white hover:bg-gray-50">Export pulled JSON</button>
+      <button id="ad-pull" class="pt-btn pt-btn-primary">Pull detectors</button>
+      <button id="ad-export" class="pt-btn pt-btn-outline">Export pulled JSON</button>
     </div>
     <div class="overflow-x-auto"><table class="min-w-full text-sm" id="ad-table"><thead></thead><tbody></tbody></table></div>
 
@@ -85,9 +92,9 @@ tailwind.config = { theme: { extend: { colors: { 'dynatrace-primary': '#1496FF',
       <label>externalId (optional) <input id="f-ext" class="block w-full border rounded p-2" placeholder="splunk:alert-name"/></label>
     </div>
     <div class="flex flex-wrap gap-2">
-      <button id="ad-fill" class="px-3 py-2 rounded border border-gray-400 bg-white hover:bg-gray-50">Form → JSON</button>
-      <button id="ad-validate" class="px-3 py-2 rounded bg-dynatrace-secondary text-white">Validate (server, no save)</button>
-      <button id="ad-push" class="px-3 py-2 rounded bg-dynatrace-primary text-white">Push (create)</button>
+      <button id="ad-fill" class="pt-btn pt-btn-outline">Form → JSON</button>
+      <button id="ad-validate" class="pt-btn pt-btn-secondary">Validate (server, no save)</button>
+      <button id="ad-push" class="pt-btn pt-btn-primary">Push (create)</button>
     </div>
   </section>
 
