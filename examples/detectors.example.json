@@ -1,0 +1,20 @@
+[
+  {
+    "title": "Low disk space (static)",
+    "model": "static",
+    "query": "timeseries avg(dt.host.disk.free), by:{dt.entity.host, dt.entity.disk}, interval:1m",
+    "alertCondition": "BELOW",
+    "threshold": 10,
+    "violatingSamples": 3,
+    "slidingWindow": 5,
+    "dealertingSamples": 5,
+    "alertOnMissingData": false,
+    "externalId": "splunk:low-disk-space",
+    "event": {
+      "type": "CUSTOM_ALERT",
+      "name": "Low amount of disk space available on host {dims:dt.entity.host.name}",
+      "description": "The disk {dims:dt.entity.disk.name} runs out of space. Free up space or resize disk.",
+      "sourceEntity": "{dims:dt.entity.host}"
+    }
+  }
+]

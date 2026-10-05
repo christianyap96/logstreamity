@@ -120,6 +120,17 @@ Then open: `http://localhost:3000` (or `:8080`, depending on your command).
 
 ---
 
+## Platform tools (`platform.html`)
+
+A second client-side page for two platform APIs. It uses a **platform token** (Bearer) against `https://<env>.apps.dynatrace.com`, not the Api-Token used for log ingest.
+
+- **Lookup files:** test a DPL parse pattern, upload or overwrite `/lookups/...` files, delete (with typed confirmation). Verify afterwards in a Notebook with `fetch dt.system.files` and `load "/lookups/..."`.
+- **Anomaly detectors:** pull all `builtin:davis.anomaly-detectors` objects (paginated) and export them as JSON; push new detectors from a form, a simplified JSON definition, or raw Settings objects. **Validate** uses `validateOnly=true` so nothing is saved.
+
+Required scopes: `storage:files:read|write|delete`, `settings:schemas:read`, `settings:objects:read|write`, plus Grail read scopes for the data a detector query touches. Tests: `node --test tests/platform.test.mjs`. Example input: `examples/detectors.example.json`.
+
+---
+
 ## Roadmap / ideas
 
 - Multi-worker fully functional
