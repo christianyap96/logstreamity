@@ -124,12 +124,13 @@ Then open: `http://localhost:3000` (or `:8080`, depending on your command).
 
 Live: **https://christianyap96.github.io/logstreamity/platform.html**
 
-A second client-side page for two platform APIs. It uses a **platform token** (Bearer) against `https://<env>.apps.dynatrace.com`, not the Api-Token used for log ingest.
+A client-side page for two platform APIs. It uses a **platform token** (Bearer) against `https://<env>.apps.dynatrace.com`, not the Api-Token used for log ingest. It has separate **Source** and **Target** connections, so you can pull from one environment and push to another.
 
-- **Lookup files:** test a DPL parse pattern, upload or overwrite `/lookups/...` files, delete (with typed confirmation). Verify afterwards in a Notebook with `fetch dt.system.files` and `load "/lookups/..."`.
-- **Anomaly detectors:** pull all `builtin:davis.anomaly-detectors` objects (paginated) and export them as JSON; push new detectors from a form, a simplified JSON definition, or raw Settings objects. **Validate** uses `validateOnly=true` so nothing is saved.
+- **Tab 1, Pull detectors (source):** pull all `builtin:davis.anomaly-detectors` objects or one by `objectId`, view the JSON as returned by the API, copy or download it, then **Send to Edit & push**. Sending strips server-only fields (`objectId`, `updateToken`, timestamps) and can reset `executionSettings.actor` (actor IDs are environment-specific), drop or keep `externalId`, create as disabled, and add a " (copy)" suffix.
+- **Tab 2, Edit & push (target):** edit or paste JSON (array, single object, or `{items:[...]}`), **Validate** (`validateOnly=true`, nothing saved) and **Push** (always creates new objects; the confirm dialog names the target environment). A simplified-definition form is included.
+- **Tab 3, Lookup files (target):** test a DPL parse pattern, upload or overwrite `/lookups/...` files, delete with typed confirmation. Verify afterwards with `fetch dt.system.files` and `load "/lookups/..."`.
 
-Required scopes: `storage:files:read|write|delete`, `settings:schemas:read`, `settings:objects:read|write`, plus Grail read scopes for the data a detector query touches. Tests: `node --test tests/platform.test.mjs`. Example input: `examples/detectors.example.json`.
+Scopes: detectors `settings:schemas:read`, `settings:objects:read` (pull) and `settings:objects:write` (push), Grail read scopes for the data a query touches (for example `storage:metrics:read`, `storage:logs:read`), and `davis:analyzers:execute` when detectors run without a service-user actor; lookups `storage:files:read|write|delete`. Tests: `node --test tests/platform.test.mjs`. Example input: `examples/detectors.example.json`.
 
 ---
 

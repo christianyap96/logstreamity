@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizePlatformBase, dtFetch, formatApiError, DtApiError } from '../src/modules/dt-platform.js';
 import { validateLookupPath, csvHeaderToDpl, uploadLookup, deleteLookup } from '../src/modules/lookup-client.js';
-import { validateDef, buildValue, toCreateBody, pullDetectors, pushDetectors, ANALYZERS } from '../src/modules/detector-client.js';
+import { validateDef, buildValue, toCreateBody, pullDetectors, pushDetectors, pullDetectorById, normalizeInput, toPushable, ANALYZERS } from '../src/modules/detector-client.js';
 
 const good = () => ({ title: 't', model: 'static', query: 'timeseries avg(m), by:{x}, interval:1m', alertCondition: 'BELOW',
   threshold: 10, violatingSamples: 3, slidingWindow: 5, dealertingSamples: 5, event: { name: 'n', description: 'd', type: 'CUSTOM_ALERT' } });
@@ -84,4 +84,35 @@ test('error formatting', async () => {
   mockFetch(() => resp(400, [{ code: 400, error: { message: 'Constraints violated.', constraintViolations: [{ path: 'value.title', message: 'must not be blank' }] } }]));
   try { await dtFetch('https://e.apps.dynatrace.com', '/x', { token: 't' }); assert.fail(); }
   catch (e) { assert.ok(e instanceof DtApiError); assert.match(formatApiError(e), /value\.title: must not be blank/); }
+});
+
+const pulledObj = () => ({ objectId: 'abc==', updateToken: 'tok', schemaId: 'builtin:davis.anomaly-detectors', schemaVersion: '1.0', scope: 'environment',
+  externalId: 'ext1', summary: 's', modified: 1, author: 'a', value: { enabled: true, title: 'T', executionSettings: { actor: 'svc-user-1', queryOffset: null }, analyzer: { name: 'x', input: [] }, eventTemplate: { properties: [] } } });
+
+test('toPushable strips server fields and applies options', () => {
+  const o = toPushable(pulledObj());
+  assert.deepEqual(Object.keys(o).sort(), ['schemaId', 'scope', 'value']);
+  assert.equal(o.value.executionSettings.actor, null);
+  const p = pulledObj(); toPushable(p); assert.equal(p.value.executionSettings.actor, 'svc-user-1'); // source not mutated
+  const k = toPushable(pulledObj(), { keepExternalId: true, resetActor: false, disable: true, copySuffix: true });
+  assert.equal(k.externalId, 'ext1'); assert.equal(k.value.executionSettings.actor, 'svc-user-1');
+  assert.equal(k.value.enabled, false); assert.equal(k.value.title, 'T (copy)');
+});
+test('normalizeInput accepts array, list response, single object', () => {
+  assert.equal(normalizeInput('[{"a":1}]').length, 1);
+  assert.equal(normalizeInput('{"items":[{"a":1},{"b":2}]}').length, 2);
+  assert.equal(normalizeInput('{"a":1}').length, 1);
+  assert.throws(() => normalizeInput('[]'));
+});
+test('toCreateBody accepts a pulled object and rejects other schemas', () => {
+  const b = toCreateBody([pulledObj()]);
+  assert.deepEqual(Object.keys(b[0]).sort(), ['externalId', 'schemaId', 'scope', 'value']);
+  assert.throws(() => toCreateBody([{ schemaId: 'builtin:other', value: {} }]), /Unexpected schemaId/);
+});
+test('pull by id encodes objectId', async () => {
+  const calls = mockFetch(() => resp(200, pulledObj()));
+  const o = await pullDetectorById('https://e.apps.dynatrace.com', 'tok', 'ab+/c==');
+  assert.equal(o.objectId, 'abc==');
+  assert.equal(new URL(calls[0].url).pathname, '/platform/classic/environment-api/v2/settings/objects/ab%2B%2Fc%3D%3D');
+  await assert.rejects(pullDetectorById('https://e.apps.dynatrace.com', 'tok', ' '));
 });

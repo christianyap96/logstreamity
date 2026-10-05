@@ -7,53 +7,128 @@
 <link href="live.png" rel="icon" type="image/png"/>
 <link href="style.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
-<script>
-tailwind.config = { theme: { extend: { colors: { 'dynatrace-primary': '#1496FF', 'dynatrace-secondary': '#454D57' } } } };
-</script>
 <style>
   .pt-btn{display:inline-block;padding:.5rem .9rem;border-radius:.375rem;font-size:.875rem;font-weight:500;cursor:pointer;border:1px solid transparent;line-height:1.25rem}
   .pt-btn-primary{background:#1496FF;color:#fff}.pt-btn-primary:hover{background:#0073E6}
   .pt-btn-secondary{background:#454D57;color:#fff}.pt-btn-secondary:hover{background:#343a42}
   .pt-btn-outline{background:#fff;color:#1f2937;border-color:#9ca3af}.pt-btn-outline:hover{background:#f3f4f6}
   .pt-btn-danger{background:#dc2626;color:#fff}.pt-btn-danger:hover{background:#b91c1c}
+  .pt-tabs{display:flex;gap:.25rem;border-bottom:2px solid #d1d5db}
+  .pt-tab{padding:.6rem 1rem;font-weight:600;font-size:.9rem;cursor:pointer;background:transparent;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;color:#4b5563}
+  .pt-tab.active{color:#0073E6;border-bottom-color:#1496FF}
+  .pt-panel{display:none}.pt-panel.active{display:block}
+  .pt-in{display:block;width:100%;margin-top:.25rem;border:1px solid #d1d5db;border-radius:.375rem;padding:.5rem;background:#fff}
+  .pt-json{width:100%;border:1px solid #d1d5db;border-radius:.375rem;padding:.5rem;font-family:ui-monospace,Consolas,monospace;font-size:.75rem;background:#fff}
 </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
 <main class="max-w-5xl mx-auto p-6 space-y-6">
   <header class="flex items-center justify-between">
-    <h1 class="text-2xl font-semibold">Platform tools: Lookups &amp; Anomaly Detectors <span class="text-xs font-normal text-gray-500">build 3</span></h1>
+    <h1 class="text-2xl font-semibold">Platform tools: Lookups &amp; Anomaly Detectors <span class="text-xs font-normal text-gray-500">build 4</span></h1>
     <a class="text-blue-600 underline" href="index.html">← Log ingest</a>
   </header>
 
   <section class="bg-white rounded-lg shadow p-6 space-y-3" id="connection">
-    <h2 class="text-xl font-semibold">Connection</h2>
-    <p class="text-sm text-gray-600">Uses a <b>platform token</b> (Bearer) against <code>https://&lt;env&gt;.apps.dynatrace.com</code>. This is not the Api-Token used for log ingest. Held in memory only.</p>
-    <label class="block text-sm">Tenant URL
-      <input id="base" class="mt-1 block w-full rounded-md shadow-sm border p-2" placeholder="https://abc12345.apps.dynatrace.com"/>
-    </label>
-    <label class="block text-sm">Platform token
-      <input id="ptoken" type="password" class="mt-1 block w-full rounded-md shadow-sm border p-2" placeholder="dt0s16..."/>
-    </label>
-    <p class="text-xs text-gray-500">Scopes: lookups <code>storage:files:read/write/delete</code>; detectors <code>settings:schemas:read</code>, <code>settings:objects:read/write</code> plus Grail read scopes for the data the query touches.</p>
+    <h2 class="text-xl font-semibold">Connections</h2>
+    <p class="text-sm text-gray-600">Platform token (Bearer) against <code>https://&lt;env&gt;.apps.dynatrace.com</code>. Not the Api-Token used for log ingest. Held in memory only. <b>Source</b> is used to pull; <b>Target</b> is used to validate/push and for lookups.</p>
+    <div class="grid grid-cols-2 gap-6">
+      <div>
+        <h3 class="font-semibold">Source environment</h3>
+        <label class="block text-sm mt-2">Tenant URL <input id="src-base" class="pt-in" placeholder="https://abc12345.apps.dynatrace.com"/></label>
+        <label class="block text-sm mt-2">Platform token <input id="src-token" type="password" class="pt-in" placeholder="dt0s16..."/></label>
+      </div>
+      <div>
+        <h3 class="font-semibold">Target environment</h3>
+        <label class="text-sm"><input id="same-as-src" type="checkbox" checked/> Same as source</label>
+        <label class="block text-sm mt-2">Tenant URL <input id="tgt-base" class="pt-in" placeholder="https://xyz98765.apps.dynatrace.com" disabled/></label>
+        <label class="block text-sm mt-2">Platform token <input id="tgt-token" type="password" class="pt-in" placeholder="dt0s16..." disabled/></label>
+      </div>
+    </div>
+    <p class="text-xs text-gray-500">Detector scopes: <code>settings:schemas:read</code>, <code>settings:objects:read</code> (pull); add <code>settings:objects:write</code> (push); Grail read scopes for the data a query touches; <code>davis:analyzers:execute</code> when detectors run without a service-user actor. Lookups: <code>storage:files:read/write/delete</code>.</p>
   </section>
 
-  <section class="bg-white rounded-lg shadow p-6 space-y-3" id="lookups">
-    <h2 class="text-xl font-semibold">Lookup files (Grail Resource Store)</h2>
+  <div class="pt-tabs" id="tabs">
+    <button class="pt-tab active" data-tab="pull">1 · Pull detectors (source)</button>
+    <button class="pt-tab" data-tab="push">2 · Edit &amp; push (target)</button>
+    <button class="pt-tab" data-tab="lookups">Lookup files (target)</button>
+  </div>
+
+  <!-- ============ TAB 1: PULL ============ -->
+  <section class="pt-panel active bg-white rounded-lg shadow p-6 space-y-4" id="tab-pull">
+    <h2 class="text-xl font-semibold">Pull anomaly detectors (<code>builtin:davis.anomaly-detectors</code>)</h2>
+    <div class="flex flex-wrap items-end gap-2">
+      <button id="ad-pull" class="pt-btn pt-btn-primary">Pull all</button>
+      <span class="mx-2 text-gray-400">or</span>
+      <label class="text-sm">By objectId <input id="ad-id" class="pt-in" style="width:26rem" placeholder="paste objectId"/></label>
+      <button id="ad-pull-id" class="pt-btn pt-btn-secondary">Pull by ID</button>
+    </div>
+    <div class="overflow-x-auto"><table class="min-w-full text-sm" id="ad-table"><thead></thead><tbody></tbody></table></div>
+    <div class="flex flex-wrap gap-2">
+      <button id="ad-show-sel" class="pt-btn pt-btn-outline">Show JSON: selected</button>
+      <button id="ad-show-all" class="pt-btn pt-btn-outline">Show JSON: all pulled</button>
+    </div>
+    <label class="block text-sm font-semibold">JSON (as returned by the API)</label>
+    <textarea id="pull-json" rows="14" class="pt-json" readonly placeholder="Pull, then select rows (or none = all) and show JSON here"></textarea>
+    <div class="flex flex-wrap gap-2">
+      <button id="pull-copy" class="pt-btn pt-btn-outline">Copy JSON</button>
+      <button id="pull-download" class="pt-btn pt-btn-outline">Download JSON</button>
+    </div>
+    <hr/>
+    <h3 class="font-semibold">Send to the Edit &amp; push tab</h3>
+    <p class="text-sm text-gray-600">Uses the selected rows, or all pulled detectors if none are selected. Server-only fields (<code>objectId</code>, <code>updateToken</code>, timestamps) are always removed so the result can be created as <b>new</b>.</p>
+    <div class="grid grid-cols-2 gap-1 text-sm">
+      <label><input id="o-reset-actor" type="checkbox" checked/> Reset <code>executionSettings.actor</code> to null (actor IDs are environment-specific)</label>
+      <label><input id="o-keep-ext" type="checkbox"/> Keep <code>externalId</code></label>
+      <label><input id="o-disable" type="checkbox"/> Create as disabled (<code>enabled:false</code>)</label>
+      <label><input id="o-suffix" type="checkbox"/> Append " (copy)" to title</label>
+    </div>
+    <button id="ad-send" class="pt-btn pt-btn-primary">Send to Edit &amp; push →</button>
+  </section>
+
+  <!-- ============ TAB 2: PUSH ============ -->
+  <section class="pt-panel bg-white rounded-lg shadow p-6 space-y-4" id="tab-push">
+    <h2 class="text-xl font-semibold">Edit &amp; push to target</h2>
+    <p class="text-sm text-gray-600">Edit the JSON freely, or paste your own. Accepts an array, a single object, an <code>{items:[…]}</code> list response, raw settings objects, or simplified definitions (see <code>examples/detectors.example.json</code>). Pushing always <b>creates new</b> objects.</p>
+    <input id="ad-import" type="file" accept=".json,application/json"/>
+    <textarea id="push-json" rows="18" class="pt-json" placeholder="[ { &quot;schemaId&quot;: &quot;builtin:davis.anomaly-detectors&quot;, &quot;scope&quot;: &quot;environment&quot;, &quot;value&quot;: { ... } } ]"></textarea>
+    <div class="flex flex-wrap gap-2">
+      <button id="push-format" class="pt-btn pt-btn-outline">Format JSON</button>
+      <button id="ad-validate" class="pt-btn pt-btn-secondary">Validate on target (no save)</button>
+      <button id="ad-push" class="pt-btn pt-btn-primary">Push to target (create)</button>
+    </div>
+    <p class="text-xs text-gray-500">Target: <b id="target-label">(not set)</b></p>
+
+    <details class="border rounded p-3">
+      <summary class="cursor-pointer font-semibold text-sm">Build a new detector from a form (simplified)</summary>
+      <div class="grid grid-cols-3 gap-3 text-sm mt-3">
+        <label>Model <select id="f-model" class="pt-in"><option value="static">static threshold</option><option value="adaptive">adaptive baseline</option><option value="seasonal">seasonal baseline</option></select></label>
+        <label>Title <input id="f-title" class="pt-in"/></label>
+        <label>Condition <select id="f-cond" class="pt-in"><option>ABOVE</option><option>BELOW</option><option>OUTSIDE</option></select></label>
+        <label class="col-span-3">DQL (timeseries, <code>interval:1m</code>) <input id="f-query" class="pt-in font-mono" placeholder="timeseries avg(dt.host.cpu.usage), by:{dt.entity.host}, interval:1m"/></label>
+        <label>Threshold (static) <input id="f-thr" class="pt-in"/></label>
+        <label>Violating / window / dealerting <input id="f-win" class="pt-in" value="3/5/5"/></label>
+        <label>Event type <select id="f-etype" class="pt-in"></select></label>
+        <label class="col-span-3">Event name <input id="f-ename" class="pt-in"/></label>
+        <label class="col-span-3">Event description <input id="f-edesc" class="pt-in"/></label>
+        <label class="col-span-2">dt.source_entity template (optional) <input id="f-ent" class="pt-in" placeholder="{dims:dt.entity.host}"/></label>
+        <label>externalId (optional) <input id="f-ext" class="pt-in" placeholder="splunk:alert-name"/></label>
+      </div>
+      <button id="ad-fill" class="pt-btn pt-btn-outline mt-3">Form → JSON</button>
+    </details>
+  </section>
+
+  <!-- ============ TAB 3: LOOKUPS ============ -->
+  <section class="pt-panel bg-white rounded-lg shadow p-6 space-y-3" id="tab-lookups">
+    <h2 class="text-xl font-semibold">Lookup files (Grail Resource Store, target environment)</h2>
     <div class="grid grid-cols-2 gap-3">
       <label class="block text-sm col-span-2">File (CSV / JSONL / any DPL-parsable text)
         <input id="lk-file" type="file" class="mt-1 block w-full"/></label>
-      <label class="block text-sm">File path
-        <input id="lk-path" class="mt-1 block w-full rounded-md border p-2" value="/lookups/my_team/my_lookup"/></label>
-      <label class="block text-sm">Lookup field (unique key)
-        <input id="lk-field" class="mt-1 block w-full rounded-md border p-2" placeholder="code"/></label>
-      <label class="block text-sm col-span-2">DPL parse pattern
-        <input id="lk-pattern" class="mt-1 block w-full rounded-md border p-2 font-mono text-sm" placeholder="JSON:json"/></label>
-      <label class="block text-sm">Skipped records (e.g. 1 for CSV header)
-        <input id="lk-skip" type="number" min="0" class="mt-1 block w-full rounded-md border p-2"/></label>
-      <label class="block text-sm">Display name
-        <input id="lk-display" class="mt-1 block w-full rounded-md border p-2"/></label>
-      <label class="block text-sm col-span-2">Description
-        <input id="lk-desc" class="mt-1 block w-full rounded-md border p-2"/></label>
+      <label class="block text-sm">File path <input id="lk-path" class="pt-in" value="/lookups/my_team/my_lookup"/></label>
+      <label class="block text-sm">Lookup field (unique key) <input id="lk-field" class="pt-in" placeholder="code"/></label>
+      <label class="block text-sm col-span-2">DPL parse pattern <input id="lk-pattern" class="pt-in font-mono" placeholder="JSON:json"/></label>
+      <label class="block text-sm">Skipped records (e.g. 1 for CSV header) <input id="lk-skip" type="number" min="0" class="pt-in"/></label>
+      <label class="block text-sm">Display name <input id="lk-display" class="pt-in"/></label>
+      <label class="block text-sm col-span-2">Description <input id="lk-desc" class="pt-in"/></label>
       <label class="text-sm col-span-2"><input id="lk-overwrite" type="checkbox"/> Overwrite if the path already exists</label>
     </div>
     <div class="flex flex-wrap gap-2">
@@ -62,39 +137,6 @@ tailwind.config = { theme: { extend: { colors: { 'dynatrace-primary': '#1496FF',
       <button id="lk-test" class="pt-btn pt-btn-secondary">Test pattern</button>
       <button id="lk-upload" class="pt-btn pt-btn-primary">Upload</button>
       <button id="lk-delete" class="pt-btn pt-btn-danger">Delete path…</button>
-    </div>
-  </section>
-
-  <section class="bg-white rounded-lg shadow p-6 space-y-3" id="detectors">
-    <h2 class="text-xl font-semibold">Anomaly detectors (<code>builtin:davis.anomaly-detectors</code>)</h2>
-    <div class="flex flex-wrap gap-2">
-      <button id="ad-pull" class="pt-btn pt-btn-primary">Pull detectors</button>
-      <button id="ad-export" class="pt-btn pt-btn-outline">Export pulled JSON</button>
-    </div>
-    <div class="overflow-x-auto"><table class="min-w-full text-sm" id="ad-table"><thead></thead><tbody></tbody></table></div>
-
-    <hr/>
-    <h3 class="font-semibold">Push new detector(s)</h3>
-    <p class="text-sm text-gray-600">Import a JSON array of raw settings objects (<code>{schemaId,scope,value}</code>) or simplified definitions (see <code>examples/detectors.example.json</code>), or fill the quick form.</p>
-    <input id="ad-import" type="file" accept=".json,application/json"/>
-    <textarea id="ad-json" rows="10" class="w-full border rounded p-2 font-mono text-xs" placeholder="[ { ...definition... } ]"></textarea>
-    <div class="grid grid-cols-3 gap-3 text-sm">
-      <label>Model <select id="f-model" class="block w-full border rounded p-2"><option value="static">static threshold</option><option value="adaptive">adaptive baseline</option><option value="seasonal">seasonal baseline</option></select></label>
-      <label>Title <input id="f-title" class="block w-full border rounded p-2"/></label>
-      <label>Condition <select id="f-cond" class="block w-full border rounded p-2"><option>ABOVE</option><option>BELOW</option><option>OUTSIDE</option></select></label>
-      <label class="col-span-3">DQL (timeseries, <code>interval:1m</code>) <input id="f-query" class="block w-full border rounded p-2 font-mono" placeholder="timeseries avg(dt.host.cpu.usage), by:{dt.entity.host}, interval:1m"/></label>
-      <label>Threshold (static) <input id="f-thr" class="block w-full border rounded p-2"/></label>
-      <label>Violating / window / dealerting <input id="f-win" class="block w-full border rounded p-2" value="3/5/5"/></label>
-      <label>Event type <select id="f-etype" class="block w-full border rounded p-2"></select></label>
-      <label class="col-span-3">Event name <input id="f-ename" class="block w-full border rounded p-2"/></label>
-      <label class="col-span-3">Event description <input id="f-edesc" class="block w-full border rounded p-2"/></label>
-      <label class="col-span-2">dt.source_entity template (optional) <input id="f-ent" class="block w-full border rounded p-2" placeholder="{dims:dt.entity.host}"/></label>
-      <label>externalId (optional) <input id="f-ext" class="block w-full border rounded p-2" placeholder="splunk:alert-name"/></label>
-    </div>
-    <div class="flex flex-wrap gap-2">
-      <button id="ad-fill" class="pt-btn pt-btn-outline">Form → JSON</button>
-      <button id="ad-validate" class="pt-btn pt-btn-secondary">Validate (server, no save)</button>
-      <button id="ad-push" class="pt-btn pt-btn-primary">Push (create)</button>
     </div>
   </section>
 

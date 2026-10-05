@@ -20,7 +20,7 @@ export async function pullDetectors(base, token) {
   const items = [];
   let r = await dtFetch(base, OBJECTS, { token, query: {
     schemaIds: SCHEMA_ID, pageSize: 500,
-    fields: 'objectId,externalId,summary,scope,modified,updateToken,value'
+    fields: 'objectId,schemaId,schemaVersion,externalId,summary,scope,modified,updateToken,value'
   }});
   items.push(...(r.data.items || []));
   // When nextPageKey is used, all other query params must be omitted.
@@ -29,6 +29,38 @@ export async function pullDetectors(base, token) {
     items.push(...(r.data.items || []));
   }
   return items;
+}
+
+/** PULL one detector by objectId. objectId is base64 (may contain = + /), so it is URL-encoded. */
+export async function pullDetectorById(base, token, objectId) {
+  const id = (objectId || '').trim();
+  if (!id) throw new Error('objectId is required');
+  const r = await dtFetch(base, `${OBJECTS}/${encodeURIComponent(id)}`, { token });
+  return r.data;
+}
+
+/** Accepts pasted JSON text: an array, a {items:[...]} list response, or a single object. Returns an array. */
+export function normalizeInput(text) {
+  const data = JSON.parse(text || '[]');
+  const arr = Array.isArray(data) ? data : (data && Array.isArray(data.items) ? data.items : (data && typeof data === 'object' ? [data] : []));
+  if (!arr.length) throw new Error('Provide a non-empty JSON array (or a single object)');
+  return arr;
+}
+
+/**
+ * Pulled settings object -> body item for POST (create as NEW object).
+ * Drops server-only fields (objectId, updateToken, created/modified, summary, ...).
+ * opts: keepExternalId (default false), resetActor (default true: actor ids belong to the source env),
+ *       disable (create with enabled=false), copySuffix (append " (copy)" to title)
+ */
+export function toPushable(obj, { keepExternalId = false, resetActor = true, disable = false, copySuffix = false } = {}) {
+  const value = JSON.parse(JSON.stringify(obj.value || {}));
+  if (resetActor && value.executionSettings) value.executionSettings.actor = null;
+  if (disable) value.enabled = false;
+  if (copySuffix && value.title) value.title = value.title + ' (copy)';
+  const out = { schemaId: obj.schemaId || SCHEMA_ID, scope: obj.scope || 'environment', value };
+  if (keepExternalId && obj.externalId) out.externalId = obj.externalId;
+  return out;
 }
 
 /** Flatten analyzer.input [{key,value}] to an object. */
@@ -114,10 +146,16 @@ export function validateDef(def) {
   return e;
 }
 
-/** Accepts raw settings objects ({schemaId,scope,value}) or simplified defs; returns POST body. */
+/** Accepts raw settings objects (pulled or {schemaId,scope,value}) or simplified defs; returns POST body. */
 export function toCreateBody(items) {
   return items.map(it => {
-    if (it.schemaId) return { schemaId: it.schemaId, scope: it.scope || 'environment', value: it.value, ...(it.externalId ? { externalId: it.externalId } : {}) };
+    const isRaw = it.schemaId || (it.value && typeof it.value === 'object' && !it.model);
+    if (isRaw) {
+      const schemaId = it.schemaId || SCHEMA_ID;
+      if (schemaId !== SCHEMA_ID) throw new Error(`Unexpected schemaId "${schemaId}" (this tool pushes ${SCHEMA_ID} only)`);
+      if (!it.value || typeof it.value !== 'object') throw new Error('Raw item has no value object');
+      return { schemaId, scope: it.scope || 'environment', value: it.value, ...(it.externalId ? { externalId: it.externalId } : {}) };
+    }
     const errs = validateDef(it);
     if (errs.length) throw new Error(`"${it.title || '(untitled)'}": ${errs.join('; ')}`);
     return { schemaId: SCHEMA_ID, scope: 'environment', value: buildValue(it), ...(it.externalId ? { externalId: it.externalId } : {}) };
