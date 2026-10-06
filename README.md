@@ -124,6 +124,8 @@ Then open: `http://localhost:3000` (or `:8080`, depending on your command).
 
 Live: **https://christianyap96.github.io/logstreamity/platform.html**
 
+> **Important: platform API calls need the local proxy.** Dynatrace's API gateway rejects browser preflight requests from other origins (for example `https://<user>.github.io`), so Pull / Push / Workflows / Lookups cannot work from the GitHub Pages copy. Run `run-local-proxy.cmd` (or `node server/local-proxy.mjs`, Node 18+) and open **http://127.0.0.1:8080/platform.html**. The page detects the proxy and routes API calls through it (same origin, so no CORS). The proxy binds to 127.0.0.1 only, refuses requests whose Host/Origin is not itself, forwards only to `*.dynatrace.com` / `*.dynatracelabs.com`, forwards only `Authorization`/`Content-Type`/`Accept`, drops cookies, and never logs tokens, bodies or query strings. The offline tabs (Splunk triage, Tracker, DQL helpers, Mappings) work on GitHub Pages as-is.
+
 A client-side page for Dynatrace platform APIs and Splunk-migration helpers. It uses a **platform token** (Bearer) against `https://<env>.apps.dynatrace.com`, not the Api-Token used for log ingest. Separate **Source** and **Target** connections let you pull from one environment and push to another.
 
 | Tab | What it does |

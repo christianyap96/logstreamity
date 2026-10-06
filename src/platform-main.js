@@ -1,5 +1,5 @@
 // src/platform-main.js — wiring for platform.html
-import { normalizePlatformBase, formatApiError } from './modules/dt-platform.js';
+import { normalizePlatformBase, formatApiError, detectProxy, setProxy } from './modules/dt-platform.js';
 import { validateLookupPath, csvHeaderToDpl, testPattern, uploadLookup, deleteLookup, verifyDql } from './modules/lookup-client.js';
 import { pullWorkflows, pullWorkflowById, summarizeWorkflow } from './modules/workflow-client.js';
 import { pullDetectors, pullDetectorById, pushDetectors, summarize, toCreateBody, toPushable, normalizeInput, EVENT_TYPES } from './modules/detector-client.js';
@@ -7,6 +7,17 @@ import { pullDetectors, pullDetectorById, pushDetectors, summarize, toCreateBody
 const $ = (id) => document.getElementById(id);
 const log = (m) => { const el = $('log'); el.textContent += `[${new Date().toLocaleTimeString()}] ${m}\n`; el.scrollTop = el.scrollHeight; };
 const guard = (fn) => async () => { try { await fn(); } catch (e) { log('ERROR ' + formatApiError(e)); } };
+
+// ---------- local proxy detection ----------
+detectProxy().then((on) => {
+  setProxy(on);
+  const el = $('proxy-status'); if (!el) return;
+  el.textContent = on
+    ? 'Local proxy active: Dynatrace API calls go through this machine (no CORS).'
+    : 'Direct mode: Dynatrace blocks browser calls to platform APIs from this origin (CORS). For Pull / Push / Workflows / Lookups run run-local-proxy.cmd and open http://127.0.0.1:8080/platform.html. Triage, Tracker, DQL helpers and Mappings work here as-is.';
+  el.className = 'text-sm font-semibold ' + (on ? 'text-green-700' : 'text-amber-700');
+  log(on ? 'Local proxy detected' : 'No local proxy: platform API calls from this page will be blocked by CORS');
+});
 
 // ---------- connections ----------
 const src = () => ({ base: normalizePlatformBase($('src-base').value), token: $('src-token').value.trim() });

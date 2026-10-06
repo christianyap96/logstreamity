@@ -17,6 +17,20 @@ export function normalizePlatformBase(input) {
   return u.origin;
 }
 
+// ---- local proxy support ----
+// Dynatrace's API gateway rejects browser preflight requests from other origins (e.g. github.io), so platform API
+// calls only work in the browser when routed through the local proxy (server/local-proxy.mjs), same-origin.
+let proxyOn = false;
+export const setProxy = (on) => { proxyOn = !!on; };
+export const isProxyOn = () => proxyOn;
+export async function detectProxy() {
+  try {
+    if (typeof location === 'undefined' || !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return false;
+    const r = await fetch('/_dtproxy/health'); if (!r.ok) return false;
+    const j = await r.json(); return !!(j && j.proxy);
+  } catch { return false; }
+}
+
 export class DtApiError extends Error {
   constructor(status, body, url) {
     super(`HTTP ${status} from ${url}`);
@@ -31,11 +45,19 @@ export async function dtFetch(base, path, { token, method = 'GET', query, header
   if (!token) throw new Error('Platform token is missing');
   const url = new URL(path, base);
   if (query) for (const [k, v] of Object.entries(query)) if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
-  const res = await fetch(url.toString(), {
-    method,
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json', ...headers },
-    body
-  });
+  const target = proxyOn ? `/_dtproxy/${url.host}${url.pathname}${url.search}` : url.toString();
+  let res;
+  try {
+    res = await fetch(target, {
+      method,
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json', ...headers },
+      body
+    });
+  } catch (e) {
+    throw new Error(proxyOn
+      ? `Local proxy request to ${url.host} failed: ${e && e.message || e}`
+      : `The browser blocked the request to ${url.host} (no HTTP status: almost certainly CORS, because Dynatrace does not allow platform API calls from this origin). Run run-local-proxy.cmd and open http://127.0.0.1:8080/platform.html instead. (${e && e.message || e})`);
+  }
   const text = await res.text();
   let parsed = text;
   try { parsed = text ? JSON.parse(text) : null; } catch { /* keep raw text */ }
