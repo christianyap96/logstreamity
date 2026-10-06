@@ -108,6 +108,9 @@ export function buildValue(def) {
   props.push({ key: 'event.type', value: def.event.type },
              { key: 'event.name', value: def.event.name },
              { key: 'event.description', value: def.event.description });
+  if (def.event.alertGroup) props.push({ key: 'dt.alert_group', value: def.event.alertGroup });
+  const have = new Set(props.map(p => p.key));
+  for (const x of (def.event.extra || [])) if (x && x.key && !have.has(x.key)) { props.push({ key: x.key, value: String(x.value ?? '') }); have.add(x.key); }
   return {
     enabled: def.enabled !== false,
     title: def.title,
@@ -143,6 +146,7 @@ export function validateDef(def) {
   if (!ev.name) e.push('event.name is required');
   if (!ev.description) e.push('event.description is required');
   if (!EVENT_TYPES.includes(ev.type)) e.push('event.type must be one of the documented types');
+  for (const x of (ev.extra || [])) if (!x || !x.key) e.push('every extra event property needs a key');
   return e;
 }
 

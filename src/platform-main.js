@@ -1,6 +1,7 @@
 // src/platform-main.js — wiring for platform.html
 import { normalizePlatformBase, formatApiError } from './modules/dt-platform.js';
 import { validateLookupPath, csvHeaderToDpl, testPattern, uploadLookup, deleteLookup, verifyDql } from './modules/lookup-client.js';
+import { pullWorkflows, pullWorkflowById, summarizeWorkflow } from './modules/workflow-client.js';
 import { pullDetectors, pullDetectorById, pushDetectors, summarize, toCreateBody, toPushable, normalizeInput, EVENT_TYPES } from './modules/detector-client.js';
 
 const $ = (id) => document.getElementById(id);
@@ -97,6 +98,9 @@ $('ad-fill').onclick = guard(async () => {
     event: { name: $('f-ename').value.trim(), description: $('f-edesc').value.trim(), type: $('f-etype').value, sourceEntity: $('f-ent').value.trim() || undefined }
   };
   if ($('f-ext').value.trim()) def.externalId = $('f-ext').value.trim();
+  if ($('f-group').value.trim()) def.event.alertGroup = $('f-group').value.trim();
+  const extra = $('f-extra').value.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => { const i = l.indexOf('='); return i > 0 ? { key: l.slice(0, i).trim(), value: l.slice(i + 1).trim() } : { key: '', value: l }; });
+  if (extra.length) def.event.extra = extra;
   $('push-json').value = JSON.stringify([def], null, 2);
 });
 $('ad-validate').onclick = guard(async () => {
@@ -140,3 +144,33 @@ $('lk-delete').onclick = guard(async () => {
   if (prompt(`Deletion on ${base} is irreversible. Type the path to confirm:\n${path}`) !== path) { log('Delete cancelled'); return; }
   await deleteLookup(base, token, path); log('Deleted ' + path);
 });
+
+// ================= WORKFLOWS (pull, source env) =================
+let wfs = [];
+const showWf = (o) => { $('wf-json').value = JSON.stringify(o, null, 2); };
+function renderWfTable() {
+  const cols = ['title', 'trigger', 'active', 'tasks', 'owner', 'id', 'filter'];
+  $('wf-table').querySelector('thead').innerHTML = '<tr>' + cols.map(c => `<th class="text-left p-1 border-b">${c}</th>`).join('') + '<th class="p-1 border-b"></th></tr>';
+  const tb = $('wf-table').querySelector('tbody'); tb.innerHTML = '';
+  for (const w of wfs) {
+    const r = summarizeWorkflow(w); const tr = document.createElement('tr');
+    for (const c of cols) { const td = document.createElement('td'); td.className = 'p-1 border-b align-top'; td.style.wordBreak = 'break-all'; td.textContent = r[c] ?? ''; tr.appendChild(td); }
+    const td = document.createElement('td'); td.className = 'p-1 border-b';
+    const b = document.createElement('button'); b.className = 'pt-btn pt-btn-outline'; b.textContent = 'View JSON'; b.onclick = () => showWf(w); td.appendChild(b); tr.appendChild(td); tb.appendChild(tr);
+  }
+}
+$('wf-pull').onclick = guard(async () => {
+  const { base, token } = src(); wfs = await pullWorkflows(base, token, { search: $('wf-search').value.trim() });
+  renderWfTable(); log(`Pulled ${wfs.length} workflow(s) from ${base}`);
+  if (!wfs.length) log('No workflows returned. If you expected some, check the scope automation:workflows:read and tell me the raw response shape.');
+});
+$('wf-pull-id').onclick = guard(async () => {
+  const { base, token } = src(); const w = await pullWorkflowById(base, token, $('wf-id').value);
+  const i = wfs.findIndex(x => x.id === w.id); if (i >= 0) wfs[i] = w; else wfs.push(w);
+  renderWfTable(); showWf(w); log(`Pulled workflow ${w.id} from ${base}`);
+});
+$('wf-copy').onclick = async () => { const t = $('wf-json').value; if (!t) return log('Nothing to copy'); log((await copyText(t)) ? 'JSON copied to clipboard' : 'Copy failed: select the text and press Ctrl+C'); };
+$('wf-download').onclick = () => {
+  const t = $('wf-json').value; if (!t) return log('Nothing to download');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([t], { type: 'application/json' })); a.download = 'workflow.json'; a.click();
+};

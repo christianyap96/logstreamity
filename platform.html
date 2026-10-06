@@ -24,7 +24,7 @@
 <body class="bg-gray-100 text-gray-800">
 <main class="max-w-5xl mx-auto p-6 space-y-6">
   <header class="flex items-center justify-between">
-    <h1 class="text-2xl font-semibold">Platform tools: Lookups &amp; Anomaly Detectors <span class="text-xs font-normal text-gray-500">build 4</span></h1>
+    <h1 class="text-2xl font-semibold">Platform tools: Lookups &amp; Anomaly Detectors <span class="text-xs font-normal text-gray-500">build 5</span></h1>
     <a class="text-blue-600 underline" href="index.html">← Log ingest</a>
   </header>
 
@@ -47,10 +47,15 @@
     <p class="text-xs text-gray-500">Detector scopes: <code>settings:schemas:read</code>, <code>settings:objects:read</code> (pull); add <code>settings:objects:write</code> (push); Grail read scopes for the data a query touches; <code>davis:analyzers:execute</code> when detectors run without a service-user actor. Lookups: <code>storage:files:read/write/delete</code>.</p>
   </section>
 
-  <div class="pt-tabs" id="tabs">
-    <button class="pt-tab active" data-tab="pull">1 · Pull detectors (source)</button>
-    <button class="pt-tab" data-tab="push">2 · Edit &amp; push (target)</button>
-    <button class="pt-tab" data-tab="lookups">Lookup files (target)</button>
+  <div class="pt-tabs" id="tabs" style="flex-wrap:wrap">
+    <button class="pt-tab active" data-tab="pull">Pull detectors</button>
+    <button class="pt-tab" data-tab="push">Edit &amp; push</button>
+    <button class="pt-tab" data-tab="workflows">Workflows (pull)</button>
+    <button class="pt-tab" data-tab="lookups">Lookup files</button>
+    <button class="pt-tab" data-tab="triage">Splunk triage</button>
+    <button class="pt-tab" data-tab="tracker">Tracker</button>
+    <button class="pt-tab" data-tab="dql">DQL helpers</button>
+    <button class="pt-tab" data-tab="mappings">Mappings</button>
   </div>
 
   <!-- ============ TAB 1: PULL ============ -->
@@ -112,7 +117,11 @@
         <label class="col-span-3">Event description <input id="f-edesc" class="pt-in"/></label>
         <label class="col-span-2">dt.source_entity template (optional) <input id="f-ent" class="pt-in" placeholder="{dims:dt.entity.host}"/></label>
         <label>externalId (optional) <input id="f-ext" class="pt-in" placeholder="splunk:alert-name"/></label>
+        <label>dt.alert_group (routing label) <input id="f-group" class="pt-in" placeholder="ops-team"/></label>
+        <label class="col-span-2">Extra event properties (one <code>key=value</code> per line, e.g. <code>email.to=…</code>, <code>action.snow.param.cmdb_ci=…</code>)
+          <textarea id="f-extra" rows="4" class="pt-json" placeholder="email.to=team@example.com&#10;action.snow=1"></textarea></label>
       </div>
+      <p class="text-xs text-gray-500 mt-2">The form builds timeseries-type detectors. Records-type alerts: pull one, edit the JSON, push it.</p>
       <button id="ad-fill" class="pt-btn pt-btn-outline mt-3">Form → JSON</button>
     </details>
   </section>
@@ -140,11 +149,132 @@
     </div>
   </section>
 
+
+  <!-- ============ TAB: WORKFLOWS ============ -->
+  <section class="pt-panel bg-white rounded-lg shadow p-6 space-y-4" id="tab-workflows">
+    <h2 class="text-xl font-semibold">Pull workflows (source, read-only)</h2>
+    <p class="text-sm text-gray-600">Platform Automation API <code>/platform/automation/v1/workflows</code>, scope <code>automation:workflows:read</code>. The <b>filter</b> column shows how an event-triggered workflow picks up events.</p>
+    <div class="flex flex-wrap items-end gap-2">
+      <label class="text-sm">Title search (optional) <input id="wf-search" class="pt-in" style="width:16rem"/></label>
+      <button id="wf-pull" class="pt-btn pt-btn-primary">Pull all</button>
+      <span class="mx-2 text-gray-400">or</span>
+      <label class="text-sm">By workflow ID <input id="wf-id" class="pt-in" style="width:22rem" placeholder="UUID"/></label>
+      <button id="wf-pull-id" class="pt-btn pt-btn-secondary">Pull by ID</button>
+    </div>
+    <div class="overflow-x-auto"><table class="min-w-full text-sm" id="wf-table"><thead></thead><tbody></tbody></table></div>
+    <textarea id="wf-json" rows="16" class="pt-json" readonly placeholder="Pull, then View JSON on a row"></textarea>
+    <div class="flex flex-wrap gap-2">
+      <button id="wf-copy" class="pt-btn pt-btn-outline">Copy JSON</button>
+      <button id="wf-download" class="pt-btn pt-btn-outline">Download JSON</button>
+    </div>
+  </section>
+
+  <!-- ============ TAB: SPLUNK TRIAGE ============ -->
+  <section class="pt-panel bg-white rounded-lg shadow p-6 space-y-4" id="tab-triage">
+    <h2 class="text-xl font-semibold">Splunk alert triage</h2>
+    <p class="text-sm text-gray-600">Paste a <code>savedsearches.conf</code> stanza (or the DMA "raw configuration"). Classification and target are <b>heuristic suggestions</b>. Mappings come from the Mappings tab; anything unmapped becomes an open question. Nothing is sent anywhere.</p>
+    <textarea id="tz-in" rows="10" class="pt-json" placeholder="name = my_alert&#10;cron_schedule = */15 * * * *&#10;search = index=... | ..."></textarea>
+    <div class="flex flex-wrap gap-2">
+      <button id="tz-run" class="pt-btn pt-btn-primary">Analyze</button>
+      <button id="tz-sample" class="pt-btn pt-btn-outline">Load sanitized sample</button>
+    </div>
+    <div id="tz-out" class="space-y-3" style="display:none">
+      <div class="flex flex-wrap gap-4 items-end">
+        <label class="text-sm">Classification <select id="tz-class" class="pt-in"></select></label>
+        <label class="text-sm">Target construct <select id="tz-target" class="pt-in"></select></label>
+        <button id="tz-add" class="pt-btn pt-btn-primary">Add to tracker</button>
+        <button id="tz-copy" class="pt-btn pt-btn-outline">Copy report (Markdown)</button>
+      </div>
+      <div id="tz-reasons" class="text-sm text-gray-700"></div>
+      <div class="overflow-x-auto"><table class="min-w-full text-sm" id="tz-facts"><tbody></tbody></table></div>
+      <h3 class="font-semibold">SPL commands</h3>
+      <div class="overflow-x-auto"><table class="min-w-full text-sm" id="tz-cmds"><thead><tr><th class="text-left p-1 border-b">command</th><th class="text-left p-1 border-b">DQL starting point</th><th class="text-left p-1 border-b">status</th><th class="text-left p-1 border-b">note</th></tr></thead><tbody></tbody></table></div>
+      <h3 class="font-semibold">Gaps to verify</h3><ul id="tz-gaps" class="list-disc pl-6 text-sm space-y-1"></ul>
+      <h3 class="font-semibold">Open questions</h3><ul id="tz-open" class="list-disc pl-6 text-sm space-y-1"></ul>
+    </div>
+  </section>
+
+  <!-- ============ TAB: TRACKER ============ -->
+  <section class="pt-panel bg-white rounded-lg shadow p-6 space-y-4" id="tab-tracker">
+    <h2 class="text-xl font-semibold">Batch tracker</h2>
+    <p class="text-sm text-gray-600">Stored only in this browser (localStorage). Export before clearing site data. Do not commit exports containing real hostnames or addresses to the public repo.</p>
+    <div class="overflow-x-auto"><table class="min-w-full text-sm" id="tr-table"><thead><tr>
+      <th class="text-left p-1 border-b">Alert</th><th class="text-left p-1 border-b">Classification</th><th class="text-left p-1 border-b">Target construct</th><th class="text-left p-1 border-b">Open questions</th><th class="text-left p-1 border-b">Status</th><th class="p-1 border-b"></th></tr></thead><tbody></tbody></table></div>
+    <div class="flex flex-wrap gap-2">
+      <button id="tr-add" class="pt-btn pt-btn-outline">Add blank row</button>
+      <button id="tr-md" class="pt-btn pt-btn-primary">Copy as Markdown table</button>
+      <button id="tr-csv" class="pt-btn pt-btn-outline">Download CSV</button>
+      <button id="tr-json-out" class="pt-btn pt-btn-outline">Export JSON</button>
+      <label class="pt-btn pt-btn-outline" style="cursor:pointer">Import JSON <input id="tr-json-in" type="file" accept=".json" style="display:none"/></label>
+      <button id="tr-clear" class="pt-btn pt-btn-danger">Clear all…</button>
+    </div>
+  </section>
+
+  <!-- ============ TAB: DQL HELPERS ============ -->
+  <section class="pt-panel bg-white rounded-lg shadow p-6 space-y-6" id="tab-dql">
+    <h2 class="text-xl font-semibold">DQL helpers (text only, nothing is executed)</h2>
+    <p class="text-sm text-gray-600">Everything generated here is <b>unverified until tested in a Notebook</b>.</p>
+
+    <div class="space-y-2">
+      <h3 class="font-semibold">A · Tidy translated DQL (e.g. DMA output) + lint</h3>
+      <textarea id="dq-in" rows="8" class="pt-json" placeholder="fetch logs, bucket:{&quot;...&quot;} | filter ..."></textarea>
+      <div class="flex flex-wrap gap-2 items-center">
+        <label class="text-sm">Collapse OR-chains to
+          <select id="dq-mode" class="pt-in" style="display:inline-block;width:auto"><option value="in">in(field, {…}) (case-sensitive)</option><option value="matchesValue">matchesValue(field, {…}) (case-insensitive)</option></select></label>
+        <button id="dq-tidy" class="pt-btn pt-btn-primary">Tidy + lint</button>
+      </div>
+      <textarea id="dq-out" rows="8" class="pt-json" readonly></textarea>
+      <div class="flex flex-wrap gap-2"><button id="dq-copy" class="pt-btn pt-btn-outline">Copy</button><button id="dq-use" class="pt-btn pt-btn-outline">Use in B ↓</button></div>
+      <ul id="dq-lint" class="list-disc pl-6 text-sm space-y-1"></ul>
+    </div>
+
+    <div class="space-y-2">
+      <h3 class="font-semibold">B · Wrap as a log-count timeseries (for timeseries-type detectors)</h3>
+      <textarea id="mt-in" rows="5" class="pt-json" placeholder="fetch logs, bucket:{...} | filter ... | parse ..."></textarea>
+      <div class="grid grid-cols-2 gap-3 text-sm">
+        <label>Dimensions (comma-separated) <input id="mt-by" class="pt-in" placeholder="host.name, neighbor_ip"/></label>
+        <label>Aggregation <input id="mt-agg" class="pt-in" value="count()"/></label>
+      </div>
+      <button id="mt-run" class="pt-btn pt-btn-primary">Wrap</button>
+      <textarea id="mt-out" rows="6" class="pt-json" readonly></textarea>
+      <div class="flex gap-2"><button id="mt-copy" class="pt-btn pt-btn-outline">Copy</button></div>
+      <ul id="mt-warn" class="list-disc pl-6 text-sm text-amber-700"></ul>
+    </div>
+
+    <div class="space-y-2">
+      <h3 class="font-semibold">C · Parse tester (generates DQL over pasted sample lines, no ingest)</h3>
+      <textarea id="ps-lines" rows="5" class="pt-json" placeholder="Paste one or more real sample log lines (one per line)"></textarea>
+      <label class="block text-sm">DPL pattern <input id="ps-pattern" class="pt-in font-mono" placeholder="DATA 'neighbor' ' ' LD:neighbor_ip ' ' LD:change_type"/></label>
+      <label class="text-sm"><input id="ps-preserve" type="checkbox" checked/> preserveFieldsOnFailure</label>
+      <div><button id="ps-run" class="pt-btn pt-btn-primary">Generate DQL</button></div>
+      <textarea id="ps-out" rows="6" class="pt-json" readonly></textarea>
+      <div class="flex gap-2"><button id="ps-copy" class="pt-btn pt-btn-outline">Copy</button></div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: MAPPINGS ============ -->
+  <section class="pt-panel bg-white rounded-lg shadow p-6 space-y-4" id="tab-mappings">
+    <h2 class="text-xl font-semibold">Mappings (used by Splunk triage)</h2>
+    <p class="text-sm text-gray-600">One <code>key = value</code> per line; <code>#</code> comments. Saved in this browser only. Keys are case-insensitive. Keep real hostnames and addresses out of the repo.</p>
+    <div class="grid grid-cols-2 gap-4 text-sm">
+      <label>Fields: Splunk field → Dynatrace field <textarea id="mp-fields" rows="6" class="pt-json" placeholder="host = host.name"></textarea></label>
+      <label>Buckets: Splunk index → Grail bucket <textarea id="mp-buckets" rows="6" class="pt-json" placeholder="my_index = my_bucket"></textarea></label>
+      <label>Severity: Splunk number or label → Dynatrace event.type / severity <textarea id="mp-severity" rows="6" class="pt-json" placeholder="3 = CUSTOM_ALERT"></textarea></label>
+      <label>Routing: assignment group or recipient → routing label <textarea id="mp-routing" rows="6" class="pt-json" placeholder="net_ops_24x7 = net-ops"></textarea></label>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <button id="mp-save" class="pt-btn pt-btn-primary">Save</button>
+      <button id="mp-export" class="pt-btn pt-btn-outline">Export JSON</button>
+      <label class="pt-btn pt-btn-outline" style="cursor:pointer">Import JSON <input id="mp-import" type="file" accept=".json" style="display:none"/></label>
+    </div>
+  </section>
+
   <section class="bg-white rounded-lg shadow p-6">
     <h2 class="text-xl font-semibold mb-2">Log</h2>
     <pre id="log" class="text-xs bg-gray-50 border rounded p-3 h-64 overflow-auto whitespace-pre-wrap"></pre>
   </section>
 </main>
 <script type="module" src="src/platform-main.js"></script>
+<script type="module" src="src/platform-splunk-ui.js"></script>
 </body>
 </html>

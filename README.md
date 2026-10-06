@@ -124,13 +124,22 @@ Then open: `http://localhost:3000` (or `:8080`, depending on your command).
 
 Live: **https://christianyap96.github.io/logstreamity/platform.html**
 
-A client-side page for two platform APIs. It uses a **platform token** (Bearer) against `https://<env>.apps.dynatrace.com`, not the Api-Token used for log ingest. It has separate **Source** and **Target** connections, so you can pull from one environment and push to another.
+A client-side page for Dynatrace platform APIs and Splunk-migration helpers. It uses a **platform token** (Bearer) against `https://<env>.apps.dynatrace.com`, not the Api-Token used for log ingest. Separate **Source** and **Target** connections let you pull from one environment and push to another.
 
-- **Tab 1, Pull detectors (source):** pull all `builtin:davis.anomaly-detectors` objects or one by `objectId`, view the JSON as returned by the API, copy or download it, then **Send to Edit & push**. Sending strips server-only fields (`objectId`, `updateToken`, timestamps) and can reset `executionSettings.actor` (actor IDs are environment-specific), drop or keep `externalId`, create as disabled, and add a " (copy)" suffix.
-- **Tab 2, Edit & push (target):** edit or paste JSON (array, single object, or `{items:[...]}`), **Validate** (`validateOnly=true`, nothing saved) and **Push** (always creates new objects; the confirm dialog names the target environment). A simplified-definition form is included.
-- **Tab 3, Lookup files (target):** test a DPL parse pattern, upload or overwrite `/lookups/...` files, delete with typed confirmation. Verify afterwards with `fetch dt.system.files` and `load "/lookups/..."`.
+| Tab | What it does |
+|---|---|
+| Pull detectors | Pull all `builtin:davis.anomaly-detectors` objects or one by `objectId`, view/copy/download the JSON, then **Send to Edit & push** (strips server-only fields; options: reset actor, keep externalId, create disabled, " (copy)" suffix). |
+| Edit & push | Edit or paste JSON (array, single object, `{items:[...]}`), **Validate** (`validateOnly=true`, nothing saved) and **Push** (always creates new; confirm names the target). Form builder supports `dt.alert_group` and extra event properties (`email.to`, `action.snow.param.*`, ...). |
+| Workflows (pull) | Read-only pull of Automation workflows (`/platform/automation/v1/workflows`), by ID or all, with the event-trigger filter column. |
+| Lookup files | Test a DPL pattern, upload/overwrite `/lookups/...`, delete with typed confirmation. |
+| Splunk triage | Paste a `savedsearches.conf` stanza: schedule, trigger, suppression, severity, actions, `$result.*$` tokens, SPL command scan, suggested classification/target, gaps and open questions. |
+| Tracker | Batch table (alert, classification, target, open questions, status) with Markdown/CSV/JSON export. |
+| DQL helpers | Tidy translated DQL (OR-chains to `in()`/`matchesValue()`), lint, wrap as `makeTimeseries ... interval:1m`, and generate a `data json:... \| parse` test for pasted sample lines. Text only; nothing is executed. |
+| Mappings | Field, bucket, severity and routing tables used by triage. |
 
-Scopes: detectors `settings:schemas:read`, `settings:objects:read` (pull) and `settings:objects:write` (push), Grail read scopes for the data a query touches (for example `storage:metrics:read`, `storage:logs:read`), and `davis:analyzers:execute` when detectors run without a service-user actor; lookups `storage:files:read|write|delete`. Tests: `node --test tests/platform.test.mjs`. Example input: `examples/detectors.example.json`.
+Mappings and the tracker live in the browser (`localStorage`) only. **Keep real hostnames, addresses and mapping exports out of this public repo.** `examples/splunk-stanza.sample.txt` is a sanitized sample.
+
+Scopes: detectors `settings:schemas:read`, `settings:objects:read` (pull) and `settings:objects:write` (push), Grail read scopes for the data a query touches, and `davis:analyzers:execute` when detectors run without a service-user actor; workflows `automation:workflows:read`; lookups `storage:files:read|write|delete`. Tests: `node --test tests/*.test.mjs`.
 
 ---
 

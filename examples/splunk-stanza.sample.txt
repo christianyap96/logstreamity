@@ -1,0 +1,29 @@
+[_bgp_change_example_circuit]
+name = _bgp_change_example_circuit
+eai:type = alert
+action.email = true
+action.email.to = user1@example.com,user2@example.com
+action.email.useNSSubject = 1
+action.remedy = 1
+action.remedy.param.assigned_group = example_ops_24x7
+action.remedy.param.description = ROUTER $result.ip_addr$-$result.host$ BGP Change detected
+action.remedy.param.detailed_description = Neighbor $result.neighbor_ip$ status is $result.change_type$ with the message $result.detailed_message$
+action.remedy.param.impact = 1-Extensive/Widespread
+action.remedy.param.urgency = 2-High
+actions = email, remedy
+alert.digest_mode = false
+alert.severity = 3
+alert.suppress = true
+alert.suppress.fields = host
+alert.suppress.period = 1h
+alert_comparator = greater than
+alert_threshold = 0
+alert_type = number of events
+cron_schedule = 2-59/15 * * * *
+description = Looks for BGP changes on example circuits
+disabled = true
+dispatch.earliest_time = -15m@m
+dispatch.latest_time = @m
+is_scheduled = true
+realtime_schedule = true
+search = index=example_idx ROUTING-BGP-5-ADJCHANGE_DETAIL host=router-a.example.net OR host=router-b.example.net|rex ":\d{2}:\d{2}\s.+?\s(?P<ip_addr>.*?)\s.*neighbor\s(?P<neighbor_ip>.*?)\s(?P<change_type>.*?)\s((?P<detailed_message>.*?)\(|\()"|table host ip_addr neighbor_ip change_type detailed_message
