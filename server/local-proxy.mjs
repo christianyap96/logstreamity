@@ -11,6 +11,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+export const DEFAULT_PORT = 8090;
 const MAX_BODY = 128 * 1024 * 1024; // lookup uploads are limited to 100 MB by Dynatrace
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.txt': 'text/plain; charset=utf-8', '.yaml': 'text/plain; charset=utf-8', '.md': 'text/plain; charset=utf-8' };
@@ -28,6 +29,24 @@ async function readBody(req) {
   const chunks = []; let n = 0;
   for await (const c of req) { n += c.length; if (n > MAX_BODY) throw Object.assign(new Error('Request body too large'), { code: 413 }); chunks.push(c); }
   return Buffer.concat(chunks);
+}
+
+/** Follow the pages' script/link/import references and list any files that are missing (e.g. a partial copy of the repo). */
+export function findMissingFiles(root = ROOT) {
+  const missing = new Set(), seen = new Set();
+  const isFile = (p) => { try { return fs.statSync(p).isFile(); } catch { return false; } };
+  const visit = (rel) => {
+    if (seen.has(rel)) return; seen.add(rel);
+    const abs = path.join(root, rel);
+    if (!isFile(abs)) { missing.add(rel); return; }
+    if (!/\.(js|mjs|html)$/.test(rel)) return;
+    const text = fs.readFileSync(abs, 'utf8'), dir = path.posix.dirname(rel), refs = [];
+    if (rel.endsWith('.html')) text.replace(/(?:src|href)="([^"#?]+)"/g, (m, u) => { if (!/^(https?:)?\/\//.test(u) && !u.startsWith('data:')) refs.push(u); return m; });
+    else text.replace(/(?:import|export)\s[^'"]*?from\s*['"](\.{1,2}\/[^'"]+)['"]|import\s*['"](\.{1,2}\/[^'"]+)['"]/g, (m, a, b) => { refs.push(a || b); return m; });
+    for (const r of refs) visit(path.posix.normalize(path.posix.join(dir, r)));
+  };
+  ['index.html', 'platform.html'].forEach(visit);
+  return [...missing].sort();
 }
 
 export function createProxyServer({ upstream = (url, init) => fetch(url, init), hostAllowed = defaultHostAllowed, root = ROOT, quiet = true } = {}) {
@@ -73,7 +92,7 @@ export function createProxyServer({ upstream = (url, init) => fetch(url, init), 
       const origin = req.headers.origin;
       if (origin) { let oh = ''; try { oh = new URL(origin).host.toLowerCase(); } catch { /* ignore */ } if (oh !== hostHdr) return send(res, 403, 'Cross-origin request refused'); }
       const u = new URL(req.url, 'http://local');
-      if (u.pathname === '/_dtproxy/health') return send(res, 200, JSON.stringify({ proxy: true }), { 'Content-Type': 'application/json' });
+      if (u.pathname === '/_dtproxy/health') return send(res, 200, JSON.stringify({ proxy: true, missing: findMissingFiles(root) }), { 'Content-Type': 'application/json' });
       if (u.pathname.startsWith('/_dtproxy/')) return await proxy(req, res, u);
       return serveStatic(req, res, u);
     } catch (e) {
@@ -83,10 +102,14 @@ export function createProxyServer({ upstream = (url, init) => fetch(url, init), 
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const port = Number(process.env.PORT) || 8080;
+  const port = Number(process.env.PORT) || DEFAULT_PORT;
   const srv = createProxyServer({ quiet: false });
-  srv.on('error', (e) => { console.error(e.code === 'EADDRINUSE' ? `Port ${port} is already in use. Set PORT=8081 and retry.` : e.message); process.exit(1); });
+  srv.on('error', (e) => { console.error(e.code === 'EADDRINUSE' ? `Port ${port} is already in use. Set PORT=8091 and retry (then open that port instead).` : e.message); process.exit(1); });
   srv.listen(port, '127.0.0.1', () => {
     console.log(`Logstreamity local proxy running.\n  Open:  http://127.0.0.1:${port}/platform.html\n  Forwards only to *.dynatrace.com / *.dynatracelabs.com. Press Ctrl+C to stop.`);
+    const missing = findMissingFiles();
+    if (missing.length) {
+      console.warn(`\n*** WARNING: this folder is NOT a complete copy of the repo. Missing ${missing.length} file(s) the pages need:\n  - ${missing.join('\n  - ')}\nThe page will not work until you use the full repo (download it from GitHub or use the full-repo zip).`);
+    }
   });
 }

@@ -79,3 +79,30 @@ test('client: without proxy a blocked fetch explains CORS', async () => {
   setProxy(false); globalThis.fetch = async () => { throw new TypeError('Failed to fetch'); };
   await assert.rejects(dtFetch('https://abc.apps.dynatrace.com', '/x', { token: 't' }), /CORS[\s\S]*run-local-proxy\.cmd/);
 });
+
+import fs from 'node:fs';
+import { DEFAULT_PORT } from '../server/local-proxy.mjs';
+test('default port is 8090 everywhere the proxy is referenced', () => {
+  assert.equal(DEFAULT_PORT, 8090);
+  for (const f of ['../run-local-proxy.cmd', '../src/modules/dt-platform.js', '../src/platform-main.js']) {
+    const t = fs.readFileSync(new URL(f, import.meta.url), 'utf8');
+    assert.ok(t.includes('127.0.0.1:8090'), f); assert.ok(!t.includes('127.0.0.1:8080'), f);
+  }
+  assert.ok(!fs.readFileSync(new URL('../server/local-proxy.mjs', import.meta.url), 'utf8').includes('8080'));
+});
+
+import os from 'node:os';
+import path from 'node:path';
+import { findMissingFiles } from '../server/local-proxy.mjs';
+test('findMissingFiles: full repo is complete; a partial copy is reported', () => {
+  assert.deepEqual(findMissingFiles(), []);
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'lsty-'));
+  const repo = path.resolve(new URL('..', import.meta.url).pathname);
+  fs.cpSync(repo, tmp, { recursive: true, filter: (s) => !/[\\/](node_modules|\.git)([\\/]|$)/.test(s) });
+  fs.rmSync(path.join(tmp, 'style.css')); fs.rmSync(path.join(tmp, 'src/modules/lookup-client.js'));
+  assert.deepEqual(findMissingFiles(tmp), ['src/modules/lookup-client.js', 'style.css']);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+test('health reports missing files', async () => {
+  const h = JSON.parse((await raw('/_dtproxy/health')).body); assert.equal(h.proxy, true); assert.deepEqual(h.missing, []);
+});

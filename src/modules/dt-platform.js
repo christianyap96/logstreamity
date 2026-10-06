@@ -56,7 +56,7 @@ export async function dtFetch(base, path, { token, method = 'GET', query, header
   } catch (e) {
     throw new Error(proxyOn
       ? `Local proxy request to ${url.host} failed: ${e && e.message || e}`
-      : `The browser blocked the request to ${url.host} (no HTTP status: almost certainly CORS, because Dynatrace does not allow platform API calls from this origin). Run run-local-proxy.cmd and open http://127.0.0.1:8080/platform.html instead. (${e && e.message || e})`);
+      : `The browser blocked the request to ${url.host} (no HTTP status: almost certainly CORS, because Dynatrace does not allow platform API calls from this origin). Run run-local-proxy.cmd and open http://127.0.0.1:8090/platform.html instead. (${e && e.message || e})`);
   }
   const text = await res.text();
   let parsed = text;
