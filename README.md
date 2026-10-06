@@ -139,7 +139,26 @@ A client-side page for Dynatrace platform APIs and Splunk-migration helpers. It 
 
 Mappings and the tracker live in the browser (`localStorage`) only. **Keep real hostnames, addresses and mapping exports out of this public repo.** `examples/splunk-stanza.sample.txt` is a sanitized sample.
 
-Scopes: detectors `settings:schemas:read`, `settings:objects:read` (pull) and `settings:objects:write` (push), Grail read scopes for the data a query touches, and `davis:analyzers:execute` when detectors run without a service-user actor; workflows `automation:workflows:read`; lookups `storage:files:read|write|delete`. Tests: `node --test tests/*.test.mjs`.
+### Platform token permissions
+
+A platform token acts as the user it belongs to: a scope only works if that user already holds the permission. Use one token per environment.
+
+| Permission | Needed for | Source | Target |
+|---|---|---|---|
+| `settings:schemas:read`, `settings:objects:read` | Pull / validate detectors | yes | yes |
+| `settings:objects:write` | Validate and push detectors | no | yes |
+| `storage:buckets:read` + `storage:logs:read` / `storage:events:read` / `storage:metrics:read` | Detector queries read Grail data (only the types the queries use) | no | yes |
+| `davis:analyzers:execute` | Detectors that run without a service-user actor | no | yes |
+| `iam:service-users:use` | Only if a detector's actor is a service user | no | if used |
+| `automation:workflows:read` | Pull workflows | yes | no |
+| `storage:files:read`, `storage:files:write`, `storage:files:delete` | Lookup files (can be limited to `/lookups/`) | no | yes |
+| `openpipeline:logs:ingest` | Log ingest (home page) with token type "Platform token" | no | yes |
+
+### Log ingest with a platform token
+
+The home page has a **Token type** selector. *Classic API token* sends `Authorization: Api-Token ...` (scope `logs.ingest`). *Platform token* sends `Authorization: Bearer ...` (scope `openpipeline:logs:ingest`). Both use the Log ingest API at `https://<env>.live.dynatrace.com/api/v2/logs/ingest`; a tenant URL ending in `.apps.dynatrace.com` is converted to the `.live.` host automatically. "Save Config" writes the token into the downloaded file in plain text: do not commit it.
+
+Tests: `node --test tests/*.test.mjs`.
 
 ---
 

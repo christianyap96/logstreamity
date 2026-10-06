@@ -4,6 +4,7 @@
 import { updateLabels, updateAttributeList } from './ui.js';
 import { loadAttributes, saveAttributes, loadAttributesFromFile } from './attributes.js';
 import { processEndpointUrl } from './ingest.js';
+import { credential } from './modules/auth-header.js';
 import { WorkerManager } from './worker.js';
 import { generateGeoScadaLines, GENERATOR_INFO as GEO_INFO } from './modules/geoscada-generator.js';
 import { generateEcommerceEmailLines, SAMPLE_EMAILS, GENERATOR_INFO as EMAIL_INFO } from './modules/ecommerce-email-generator.js';
@@ -11,6 +12,15 @@ import { generateEcommerceEmailLines, SAMPLE_EMAILS, GENERATOR_INFO as EMAIL_INF
 // ===== Globals & DOM refs =====
 const endpointInput = document.getElementById('endpoint');
 const tokenInput = document.getElementById('token');
+const authSchemeSel = document.getElementById('auth-scheme');
+const tokenHint = document.getElementById('token-hint');
+function refreshAuthHint(){
+  const platform = authSchemeSel && authSchemeSel.value === 'platform';
+  if (tokenHint) tokenHint.textContent = platform ? '(platform token with openpipeline:logs:ingest scope; sent as Bearer)' : '(with logs.ingest scope; sent as Api-Token)';
+  if (tokenInput) tokenInput.placeholder = platform ? 'dt0s16.ABC123...' : 'dt0c01.ABC123...';
+}
+authSchemeSel?.addEventListener('change', refreshAuthHint);
+refreshAuthHint();
 const delayInput = document.getElementById('delay');
 const lineVolumeInput = document.getElementById('lineVolume');
 const fileInput = document.getElementById('logFile');
@@ -186,7 +196,7 @@ attributesFileInput?.addEventListener('change', async (event) => {
 });
 
 saveConfigBtn?.addEventListener('click', () => {
-  const config = { endpoint: endpointInput.value.trim(), token: tokenInput.value.trim() };
+  const config = { endpoint: endpointInput.value.trim(), token: tokenInput.value.trim(), authScheme: authSchemeSel ? authSchemeSel.value : 'classic' };
   const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -203,6 +213,7 @@ configFileInput?.addEventListener('change', (e) => {
         const config = JSON.parse(e.target.result);
         endpointInput.value = config.endpoint || '';
         tokenInput.value = config.token || '';
+        if (config.authScheme && authSchemeSel) { authSchemeSel.value = config.authScheme; refreshAuthHint(); }
         validateReady();
       } catch { alert('Invalid config file'); }
     };
@@ -373,6 +384,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (conf){
     if (conf.endpoint) endpointInput.value = conf.endpoint;
     if (conf.token) tokenInput.value = conf.token;
+    if (conf.authScheme && authSchemeSel) { authSchemeSel.value = conf.authScheme; refreshAuthHint(); }
     const theme = (conf.global && conf.global.darkMode) || 'auto';
     if (theme === 'dark') document.documentElement.setAttribute('data-theme','dark');
     else if (theme === 'light') document.documentElement.setAttribute('data-theme','light');
@@ -397,7 +409,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 startBtn?.addEventListener('click', async () => {
   try { console.clear(); } catch {}
   const endpoint = processEndpointUrl(endpointInput.value.trim());
-  const token = tokenInput.value.trim();
+  const token = credential(tokenInput.value, authSchemeSel ? authSchemeSel.value : 'classic');
   const baseDelay = parseInt(delayInput.value.trim(), 10) || 1000;
   const baseVolume = parseInt(lineVolumeInput.value.trim(), 10) || 1;
   const hasPrepared = Array.isArray(PREPARED_LINES) && PREPARED_LINES.length > 0;

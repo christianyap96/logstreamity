@@ -1,5 +1,6 @@
 // src/ingest.js
 import { RateLimiter } from './modules/rate-limiter.js';
+import { authHeader } from './modules/auth-header.js';
 
 
 export const processEndpointUrl = (input) => {
@@ -8,7 +9,8 @@ export const processEndpointUrl = (input) => {
   if (!/^https?:\/\//i.test(urlStr)) urlStr = "https://" + urlStr;
   let u;
   try { u = new URL(urlStr); } catch { return urlStr; }
-  u.hostname = u.hostname.replace(/\.apps\./i, "."); // remove .apps. (case-insensitive)
+  // SaaS: <env>.apps.dynatrace.com -> <env>.live.dynatrace.com (a bare ".apps." removal would give a host that does not exist)
+  u.hostname = u.hostname.replace(/\.apps\.dynatrace\.com$/i, ".live.dynatrace.com").replace(/\.apps\./i, "."); // remove .apps. (case-insensitive)
   u.pathname = "/api/v2/logs/ingest";
   u.search = "";
   u.hash = "";
@@ -188,7 +190,7 @@ async function sendWithRetry(endpoint, token, body, attempt = 0) {
   const res = await fetch(endpoint, {
     method: 'POST',
     headers: {
-      'Authorization': `Api-Token ${token}`,
+      'Authorization': authHeader(token),
       'Content-Type': 'application/json; charset=utf-8'
     },
     body: JSON.stringify(body)

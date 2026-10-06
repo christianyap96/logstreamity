@@ -2,6 +2,8 @@
 
 /* Utilities */
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+// Same logic as src/modules/auth-header.js (classic workers cannot import modules): "Bearer x"/"Api-Token x" pass through, a bare token is a classic token.
+function authHeader(token){ const t=String(token==null?'':token).trim(); return /^(Bearer|Api-Token)\s+/i.test(t) ? t : `Api-Token ${t}`; }
 class RateLimiter{
   // Refills continuously (proportional to elapsed time) instead of hard-resetting to
   // full capacity once per second. A once-per-second reset is fine when every take()
@@ -54,7 +56,7 @@ function abortInFlight(){ for (const ctrl of inFlightControllers){ try{ ctrl.abo
 async function sendWithRetry(endpoint, token, body, attempt=0, signal){
   const res = await fetch(endpoint, {
     method:"POST",
-    headers:{ "Authorization":`Api-Token ${token}`, "Content-Type":"application/json; charset=utf-8" },
+    headers:{ "Authorization":authHeader(token), "Content-Type":"application/json; charset=utf-8" },
     body: JSON.stringify(body),
     signal
   });

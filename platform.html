@@ -24,7 +24,7 @@
 <body class="bg-gray-100 text-gray-800">
 <main class="max-w-5xl mx-auto p-6 space-y-6">
   <header class="flex items-center justify-between">
-    <h1 class="text-2xl font-semibold">Platform tools: Lookups &amp; Anomaly Detectors <span class="text-xs font-normal text-gray-500">build 5</span></h1>
+    <h1 class="text-2xl font-semibold">Platform tools: Lookups &amp; Anomaly Detectors <span class="text-xs font-normal text-gray-500">build 6</span></h1>
     <a class="text-blue-600 underline" href="index.html">← Log ingest</a>
   </header>
 
@@ -44,7 +44,20 @@
         <label class="block text-sm mt-2">Platform token <input id="tgt-token" type="password" class="pt-in" placeholder="dt0s16..." disabled/></label>
       </div>
     </div>
-    <p class="text-xs text-gray-500">Detector scopes: <code>settings:schemas:read</code>, <code>settings:objects:read</code> (pull); add <code>settings:objects:write</code> (push); Grail read scopes for the data a query touches; <code>davis:analyzers:execute</code> when detectors run without a service-user actor. Lookups: <code>storage:files:read/write/delete</code>.</p>
+    <details class="text-sm border rounded p-3">
+      <summary class="cursor-pointer font-semibold">Platform token permissions (click to expand)</summary>
+      <p class="mt-2 text-gray-600">Platform tokens act as the user (or service user) they belong to: a scope on the token only works if that user already holds the permission. Create one token per environment. Platform token docs: "My platform tokens".</p>
+      <table class="min-w-full mt-2 text-xs"><thead><tr><th class="text-left p-1 border-b">Permission</th><th class="text-left p-1 border-b">Needed for</th><th class="text-left p-1 border-b">Source</th><th class="text-left p-1 border-b">Target</th></tr></thead><tbody>
+        <tr><td class="p-1 border-b"><code>settings:schemas:read</code>, <code>settings:objects:read</code></td><td class="p-1 border-b">Pull / validate detectors</td><td class="p-1 border-b">yes</td><td class="p-1 border-b">yes</td></tr>
+        <tr><td class="p-1 border-b"><code>settings:objects:write</code></td><td class="p-1 border-b">Validate and push detectors</td><td class="p-1 border-b">no</td><td class="p-1 border-b">yes</td></tr>
+        <tr><td class="p-1 border-b"><code>storage:buckets:read</code> + <code>storage:logs:read</code> / <code>storage:events:read</code> / <code>storage:metrics:read</code></td><td class="p-1 border-b">Detector queries read Grail data (only the data types the queries use; bucket-level access applies)</td><td class="p-1 border-b">no</td><td class="p-1 border-b">yes</td></tr>
+        <tr><td class="p-1 border-b"><code>davis:analyzers:execute</code></td><td class="p-1 border-b">Detectors that run without a service-user actor</td><td class="p-1 border-b">no</td><td class="p-1 border-b">yes</td></tr>
+        <tr><td class="p-1 border-b"><code>iam:service-users:use</code></td><td class="p-1 border-b">Only if a detector's actor is a service user</td><td class="p-1 border-b">no</td><td class="p-1 border-b">if used</td></tr>
+        <tr><td class="p-1 border-b"><code>automation:workflows:read</code></td><td class="p-1 border-b">Pull workflows</td><td class="p-1 border-b">yes</td><td class="p-1 border-b">no</td></tr>
+        <tr><td class="p-1 border-b"><code>storage:files:read</code>, <code>storage:files:write</code>, <code>storage:files:delete</code></td><td class="p-1 border-b">Lookup files (can be limited to <code>/lookups/</code>)</td><td class="p-1 border-b">no</td><td class="p-1 border-b">yes</td></tr>
+        <tr><td class="p-1"><code>openpipeline:logs:ingest</code></td><td class="p-1">Log ingest from the home page with token type "Platform token"</td><td class="p-1">no</td><td class="p-1">yes</td></tr>
+      </tbody></table>
+    </details>
   </section>
 
   <div class="pt-tabs" id="tabs" style="flex-wrap:wrap">

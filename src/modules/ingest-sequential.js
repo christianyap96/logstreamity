@@ -1,5 +1,6 @@
 ﻿import { RateLimiter } from "./rate-limiter.js";
 import { sleep } from "./sleep.js";
+import { authHeader } from "./auth-header.js";
 
 export async function ingestSequential({
   lines, batchSize, delayMs, url, token, source,
@@ -29,7 +30,7 @@ async function sendBatchWithRetry(url, token, payload, debug, onDebug) {
   while (true) {
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json; charset=utf-8", Authorization: `Api-Token ${token}` },
+      headers: { "Content-Type": "application/json; charset=utf-8", Authorization: authHeader(token) },
       body: JSON.stringify(payload)
     });
     if (res.ok) return res;

@@ -101,7 +101,14 @@
 </div>
 </div>
 <div>
-<label class="block text-sm font-medium text-gray-700" for="token">API Token <small>(with logs.ingest scope)</small></label>
+<label class="block text-sm font-medium text-gray-700" for="auth-scheme">Token type</label>
+<select class="mt-1 block w-1/2 rounded-md shadow-sm" id="auth-scheme">
+<option value="classic">Classic API token (Api-Token, logs.ingest scope)</option>
+<option value="platform">Platform token (Bearer, openpipeline:logs:ingest scope)</option>
+</select>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700" for="token">Token <small id="token-hint">(with logs.ingest scope)</small></label>
 <div class="mt-1 flex">
 <input class="block w-full rounded-md shadow-sm" id="token" placeholder="dt0c01.ABC123..." type="password"/>
 <button class="btn-secondary ml-2" id="help-token">Help</button>
