@@ -2,6 +2,7 @@
 import { normalizePlatformBase, formatApiError, detectProxy, setProxy } from './modules/dt-platform.js';
 import { validateLookupPath, csvHeaderToDpl, testPattern, uploadLookup, deleteLookup, verifyDql } from './modules/lookup-client.js';
 import { pullWorkflows, pullWorkflowById, summarizeWorkflow } from './modules/workflow-client.js';
+import { parseLogs, prepareRecords, parseExtra, sendLogs } from './modules/custom-log-client.js';
 import { pullDetectors, pullDetectorById, pushDetectors, summarize, toCreateBody, toPushable, normalizeInput, EVENT_TYPES } from './modules/detector-client.js';
 
 const $ = (id) => document.getElementById(id);
@@ -185,3 +186,23 @@ $('wf-download').onclick = () => {
   const t = $('wf-json').value; if (!t) return log('Nothing to download');
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([t], { type: 'application/json' })); a.download = 'workflow.json'; a.click();
 };
+
+// ================= SEND LOGS (target env) =================
+const SAMPLE_LOG = JSON.stringify({ source_type: 'cisco_ios', 'host.name': 'corpccmbravo1.hca.corpad.net', content: 'UC_DRF-3-DRFFailure', Reason: 'Backup failed: unable to reach SFTP server' }, null, 2);
+const slRecords = () => {
+  const { records, format } = parseLogs($('sl-text').value);
+  return { records: prepareRecords(records, { stampNow: $('sl-now').checked, extra: parseExtra($('sl-extra').value) }), format };
+};
+$('sl-sample').onclick = () => { $('sl-text').value = SAMPLE_LOG; };
+$('sl-preview').onclick = guard(async () => {
+  const { records, format } = slRecords();
+  log(`Preview (${format}, ${records.length} record(s)):\n` + JSON.stringify(records, null, 2));
+});
+$('sl-send').onclick = guard(async () => {
+  const { base, token: platTok } = tgt(); const type = $('sl-type').value;
+  const token = $('sl-token').value.trim() || (type === 'platform' ? platTok : '');
+  const { records } = slRecords();
+  if (!confirm(`Send ${records.length} log record(s) to:\n${base}\n\nContinue?`)) return;
+  const r = await sendLogs({ endpoint: base, token, tokenType: type, records });
+  log(`Log ingest ${r.url}: HTTP ${r.status}${r.status === 204 ? ' (accepted)' : ''}${r.body ? '\n' + r.body : ''}`);
+});

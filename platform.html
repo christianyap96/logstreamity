@@ -24,7 +24,7 @@
 <body class="bg-gray-100 text-gray-800">
 <main class="max-w-5xl mx-auto p-6 space-y-6">
   <header class="flex items-center justify-between">
-    <h1 class="text-2xl font-semibold">Platform tools: Lookups &amp; Anomaly Detectors <span class="text-xs font-normal text-gray-500">build 8</span></h1>
+    <h1 class="text-2xl font-semibold">Platform tools: Lookups &amp; Anomaly Detectors <span class="text-xs font-normal text-gray-500">build 9</span></h1>
     <a class="text-blue-600 underline" href="index.html">← Log ingest</a>
   </header>
 
@@ -65,6 +65,7 @@
     <button class="pt-tab active" data-tab="pull">Pull detectors</button>
     <button class="pt-tab" data-tab="push">Edit &amp; push</button>
     <button class="pt-tab" data-tab="workflows">Workflows (pull)</button>
+    <button class="pt-tab" data-tab="sendlogs">Send logs</button>
     <button class="pt-tab" data-tab="lookups">Lookup files</button>
     <button class="pt-tab" data-tab="triage">Splunk triage</button>
     <button class="pt-tab" data-tab="tracker">Tracker</button>
@@ -138,6 +139,27 @@
       <p class="text-xs text-gray-500 mt-2">The form builds timeseries-type detectors. Records-type alerts: pull one, edit the JSON, push it.</p>
       <button id="ad-fill" class="pt-btn pt-btn-outline mt-3">Form → JSON</button>
     </details>
+  </section>
+
+  <!-- ============ TAB: SEND LOGS ============ -->
+  <section class="pt-panel bg-white rounded-lg shadow p-6 space-y-3" id="tab-sendlogs">
+    <h2 class="text-xl font-semibold">Send custom logs (target environment)</h2>
+    <p class="text-sm text-gray-600">Paste one JSON object, a JSON array, NDJSON, or plain text lines (each line becomes <code>content</code>). Sent to <code>/api/v2/logs/ingest</code> on the <b>Target</b> tenant (<code>.apps.</code> is converted to <code>.live.</code>). Works on GitHub Pages and through the local proxy.</p>
+    <div class="grid grid-cols-2 gap-3">
+      <label class="block text-sm">Token type
+        <select id="sl-type" class="pt-in"><option value="classic">Classic API token (Api-Token, scope logs.ingest)</option><option value="platform">Platform token (Bearer, openpipeline:logs:ingest)</option></select></label>
+      <label class="block text-sm">Token <input id="sl-token" type="password" class="pt-in" placeholder="blank = use Target platform token above (platform type only)"/></label>
+      <label class="block text-sm col-span-2">Extra attributes added to every record (one <code>key=value</code> per line; the record's own values win)
+        <textarea id="sl-extra" class="pt-json" rows="2" placeholder="log.source=splunk-migration-test"></textarea></label>
+      <label class="text-sm col-span-2"><input id="sl-now" type="checkbox" checked/> Set <code>timestamp</code> to now (recommended: old timestamps are rejected or fall outside alert windows)</label>
+    </div>
+    <textarea id="sl-text" class="pt-json" rows="12" placeholder='{"source_type":"cisco_ios","host.name":"corpccmbravo1.hca.corpad.net","content":"UC_DRF-3-DRFFailure","Reason":"Backup failed"}'></textarea>
+    <div class="flex flex-wrap gap-2">
+      <button id="sl-sample" class="pt-btn pt-btn-outline">Load sample (cisco_ios DRF)</button>
+      <button id="sl-preview" class="pt-btn pt-btn-secondary">Preview payload</button>
+      <button id="sl-send" class="pt-btn pt-btn-primary">Send</button>
+    </div>
+    <p class="text-xs text-gray-500">HTTP 204 = accepted. Logs usually show in a Notebook within about a minute. Check with: <code>fetch logs, from:-15m | filter log.source == "splunk-migration-test"</code> (or whatever you set above).</p>
   </section>
 
   <!-- ============ TAB 3: LOOKUPS ============ -->
